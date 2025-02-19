@@ -52,6 +52,14 @@ class TimeInstance:
         # check if the parent is not a descendant of the current time instance
         if new_parent in self.get_all_children():
             raise ValueError("Cannot set the parent to a descendant")
+        
+        # Check if new_parent creates ancestor loop
+        current = new_parent
+        while current:
+            if current == self:
+                raise ValueError("New parent creates circular dependency")
+            current = current.parent
+
         # check the parent belongs to the same sequence
         if self.get_root() != new_parent.get_root():
             raise ValueError("Cannot set the parent to a time instance from a different sequence")
@@ -98,14 +106,14 @@ class TimeInstance:
         if self.parent is None:
             raise Exception("Cannot delete root time frame")
 
-        # check if deleting self will result in negative absolute time for any of the children
+        # Calculate new relative_time for children
+        for child in self.children:
+            child.relative_time += self.relative_time  # NEW FIX
 
-        # get all children of the current time instance
-        children = self.get_all_children()
-        delta = - self.relative_time 
-        for child in children:
-            if child.get_absolute_time() + delta < 0:
-                raise ValueError("Deleting this time instance will result in negative absolute time for one of the children")
+        # Check for negative times after adjustment
+        for child in self.get_all_children():
+            if child.get_absolute_time() < 0:
+                raise ValueError("Deletion would create negative absolute time")
             
         for child in self.children:
             child.parent = self.parent
@@ -175,3 +183,69 @@ class TimeInstance:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+
+if __name__ == "__main__":
+    # Test initialization and parent-child relationship
+    root = TimeInstance("root")
+    child1 = TimeInstance("child1", root, 10)
+    child2 = root.add_child_time_instance("child2", 20)
+    assert root.get_child_time_instance_by_name("child1") == child1
+    assert root.children == [child1, child2]
+    
+    # Test relative_time validation in root
+    try:
+        TimeInstance("invalid_root", relative_time=1)
+        assert False
+    except ValueError:
+        pass
+    
+    # Test get_absolute_time
+    assert child1.get_absolute_time() == 10
+    assert child2.get_absolute_time() == 20
+    
+    # Test add_event and add_ending_ramp
+    child1.add_event("event1")
+    child1.add_ending_ramp("ramp1")
+    assert child1.events == ["event1"]
+    assert child1.ending_ramps == ["ramp1"]
+    
+    # Test get_descendant_by_name
+    grandchild = child1.add_child_time_instance("grandchild", 5)
+    assert root.get_descendant_by_name("grandchild") == grandchild
+    
+    # Test edit_name uniqueness
+    try:
+        grandchild.edit_name("child1")
+        assert False 
+    except Exception:
+        pass
+    
+    # Test edit_relative_time validation
+    try:
+        grandchild.edit_relative_time(-15)  # Absolute time would be 10+5-15=0
+        assert False
+    except ValueError:
+        pass
+    
+    # Test delete_self and parent reassignment
+    child1.delete_self()
+    assert grandchild.parent == root
+    assert grandchild.relative_time == 15  # 10+5 originally, now 15 after parent deletion
+    
+    # Test get_root and hierarchy traversal
+    assert grandchild.get_root() == root
+    
+    # Test get_all_children
+    assert set(root.get_all_children()) == {child2, grandchild}
+    
+    
+    # Test get_time_instance_by_name
+    assert root.get_time_instance_by_name("child2") == child2
+    
+    # Test deep copy independence
+    root_copy = root.create_a_deep_copy_of_all_frames()
+    root_copy.edit_name("new_root")
+    assert root.name == "root"  # Original unchanged
+    
+    print("All basic validation tests passed")
