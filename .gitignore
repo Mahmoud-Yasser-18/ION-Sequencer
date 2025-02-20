@@ -1,14 +1,24 @@
-# Python
+# Nix-specific
+/result*
+/result
+/.direnv/
+/flake.lock
+
+# Python artifacts
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.env/
+*.pyc
+*.pyo
+*.pyd
 .venv/
-pip-log.txt
+venv/
+dist/
+build/
+*.egg-info/
+
+# Editor files
+.vscode/
+.idea/
+
 test.py
 
 
