@@ -3,8 +3,8 @@ import bisect
 import numpy as np
 from abc import ABC, abstractmethod
 
-from ionseq.seq.time_instance import TimeInstance
-from ionseq.seq.utils import exp_to_func, find_min_max
+from ion_sequencer.seq.time_instance import TimeInstance
+from ion_sequencer.seq.utils import exp_to_func, find_min_max
 from typing import Union, List, Optional
 from typing import Optional
 
